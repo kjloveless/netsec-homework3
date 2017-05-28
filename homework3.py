@@ -2,6 +2,7 @@ import socket
 import sys
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Hash import SHA256
 from Crypto import Random
 
 #setup server role
@@ -52,9 +53,13 @@ def client():
     sock.connect(server_address)
 
     try:
-        message = raw_input('Enter the message you would like to send: ')
+        filename = raw_input('Enter the filename you would like to encrypt and send: ')
+        encrypt(filename)
+        encrypted_file_data = open("testtext.txt_encrypted").read()
+        hash(encrypted_file_data)
+        message = "placeholder"
         while message != "exit":
-            encrypt("test","test","test")
+            message = raw_input('Enter the message to send: ')
             print >>sys.stderr, 'sending "%s"' % message
             sock.sendall(message)
 
@@ -70,21 +75,33 @@ def client():
         sock.close()
     return
 
+def hash(data):
+    h = SHA256.new()
+    h.update(data)
+    hash_value = h.hexdigest()
+
+    print("the hex digest of the data is: " + hash_value)
+    return
+
 #TO-DO: add server public key encryption as verify authorization of server
 def encrypt(filename):
     print("entered encrypt function")
-    file_out = open(filename+"_encrypted", "wb")
-    #imports clients public key to encrypt data
-    public_client_key = RSA.import_key(open("rsa_server_key.pem")).publickey()
-
     #message to encrypt
     #message = "secret"
-    message = open(filename, "rb").read()
-    cipher = PKCS1_OAEP.new(public_client_key)
+    try:
+        message = open(filename, "rb").read()
 
-    file_out.write(cipher.encrypt(message))
+        file_out = open(filename+"_encrypted", "wb")
+        #imports clients public key to encrypt data
+        public_client_key = RSA.import_key(open("rsa_server_key.pem")).publickey()
 
-    print("exiting encryption function")
+        cipher = PKCS1_OAEP.new(public_client_key)
+
+        file_out.write(cipher.encrypt(message))
+    except:
+        pass
+    finally:
+        print("exiting encryption function")
 
     return
 
@@ -107,9 +124,6 @@ def decrypt(filename):
 choice = ''
 
 while choice not in ['server', 's', 'client', 'c']:
-    #TO-DO: move the encrypt function call into the client function
-    encrypt("testtext.txt")
-    decrypt("testtext.txt_encrypted")
     choice = raw_input('Enter your role(server or client)').lower()
 
 if choice in ['client', 'c']:
