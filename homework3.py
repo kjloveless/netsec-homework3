@@ -70,24 +70,46 @@ def client():
         sock.close()
     return
 
-def encrypt(message):
+#TO-DO: add server public key encryption as verify authorization of server
+def encrypt(filename):
     print("entered encrypt function")
-    file_out = open("encrypted_data01.bin", "wb")
+    file_out = open(filename+"_encrypted", "wb")
     #imports clients public key to encrypt data
     public_client_key = RSA.import_key(open("rsa_server_key.pem")).publickey()
 
+    #message to encrypt
+    #message = "secret"
+    message = open(filename, "rb").read()
     cipher = PKCS1_OAEP.new(public_client_key)
 
-    file_out.write("test")
+    file_out.write(cipher.encrypt(message))
 
     print("exiting encryption function")
 
+    return
+
+def decrypt(filename):
+    print("entering decrypt function")
+
+    file_in = open(filename, "rb").read()
+
+    private_server_key = RSA.import_key(open("rsa_server_key.pem").read())
+
+    cipher = PKCS1_OAEP.new(private_server_key)
+    message = cipher.decrypt(file_in)
+
+    print("decrypted message: " + message)
+    print("exiting decrypt function")
+
+    return
 
 #initializes an empty string to be used to validate role input
 choice = ''
 
 while choice not in ['server', 's', 'client', 'c']:
-    encrypt("test")
+    #TO-DO: move the encrypt function call into the client function
+    encrypt("testtext.txt")
+    decrypt("testtext.txt_encrypted")
     choice = raw_input('Enter your role(server or client)').lower()
 
 if choice in ['client', 'c']:
