@@ -40,6 +40,10 @@ def server():
 
 #setup client role
 #TO-DO need to figure out how client will format packet of data to send
+#I want to send an initial message containing the length of the packet the
+#   server should expect to receive from the client so something like the
+#   following: {Length of data packet}Server+
+#Packet format should look like this -> {hash|encrypted data}Server+
 def client():
     #set up connection to server
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,6 +93,8 @@ def hash(data):
     return h.hexdigest()
 
 #TO-DO: add server public key encryption as verify authorization of server
+#   need to return the encrypted data for the client to use, also need to
+#   generalize to allow specification of key file used to encrypt with
 def encrypt(filename):
     try:
         #reads data in from file to encrypt
@@ -96,11 +102,11 @@ def encrypt(filename):
         #creates new file to store encrypted data in
         file_out = open(filename+"_encrypted", "wb")
         #imports clients public key to encrypt data
-        public_client_key = RSA.import_key(open("rsa_server_key.pem")).publickey()
+        public_client_key = RSA.import_key(open("rsa_key.pem")).publickey()
         #sets up object used to encrypt
         cipher = PKCS1_OAEP.new(public_client_key)
-        #writes encrypted data to file
-        file_out.write(cipher.encrypt(message))
+        #returns encrypted data to let client/server handle
+        return cipher.encrypt(message)
     except:
         #passes file not found exception
         pass
