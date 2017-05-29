@@ -29,7 +29,7 @@ def server():
                 #store message from client in data variable
                 data = connection.recv(4096)
                 if data:
-                    print >>sys.stderr, 'sending "%s" back to the client', data
+                    print >>sys.stderr, 'sending "%s" back to the client' % data
                     connection.sendall('received message: ' + data)
                 else:
                     print >>sys.stderr, 'no more data from', client_address
@@ -51,37 +51,44 @@ def client():
     print >>sys.stderr, 'connecting to %s port %s' % server_address
     sock.connect(server_address)
 
-    #begin communication with server and start performing data transfer
-    try:
-        filename = raw_input('Enter the filename you would like to encrypt and send: ')
-        encrypt(filename)
-        encrypted_file_data = open(filename+"_encrypted").read()
-        hash_digest = hash(encrypted_file_data)
-        #print hash for verification
-        #print(hash_digest)
+    choice = raw_input("Would you like to send or retrieve data? ")
+    if(choice == "send"):
+        #begin communication with server and start performing data transfer
+        try:
+            filename = raw_input('Enter the filename you would like to encrypt and send: ')
+            key_file = raw_input('Enter the key file you would like to encrypt with: ')
 
-        #begin loop for client input
-        message = "placeholder"
-        while message != "exit":
-            message = raw_input('Enter the message to send: ')
-            if(message == "exit"):
-                break
-            #the following is just being used for testing communication between
-            #   client and server for now
-            #print >>sys.stderr, 'sending "%s"' % message
-            sock.sendall(message)
-            amount_received = 0
-            amount_expected = len(message)
+            encrypted_data = encrypt(filename, key_file)
+            print(encrypted_data)
 
-            #loop of how much data to expect back from server
-            while amount_received < amount_expected:
-                data = sock.recv(4096)
-                amount_received += len(data)
-                print >>sys.stderr, '"%s"' % data
-    finally:
-        print >>sys.stderr, 'closing socket'
-        sock.close()
-    return
+            hash_digest = hash(encrypted_data)
+            #print hash for verification
+            #print(hash_digest)
+
+            #begin loop for client input
+            message = "placeholder"
+            while message != "exit":
+                message = raw_input('Enter the message to send: ')
+                if(message == "exit"):
+                    break
+                #the following is just being used for testing communication between
+                #   client and server for now
+                #print >>sys.stderr, 'sending "%s"' % message
+                sock.sendall(message)
+                amount_received = 0
+                amount_expected = len(message)
+
+                #loop of how much data to expect back from server
+                while amount_received < amount_expected:
+                    data = sock.recv(4096)
+                    amount_received += len(data)
+                    print >>sys.stderr, '"%s"' % data
+        finally:
+            print >>sys.stderr, 'closing socket'
+            sock.close()
+        return
+    else:
+        return
 
 #used to create the hash digest for the encrypted message
 def hash(data):
@@ -95,14 +102,12 @@ def hash(data):
 #TO-DO: add server public key encryption as verify authorization of server
 #   need to return the encrypted data for the client to use, also need to
 #   generalize to allow specification of key file used to encrypt with
-def encrypt(filename):
+def encrypt(filename, key_file):
     try:
         #reads data in from file to encrypt
         message = open(filename, "rb").read()
-        #creates new file to store encrypted data in
-        file_out = open(filename+"_encrypted", "wb")
         #imports clients public key to encrypt data
-        public_client_key = RSA.import_key(open("rsa_key.pem")).publickey()
+        public_client_key = RSA.import_key(open(key_file)).publickey()
         #sets up object used to encrypt
         cipher = PKCS1_OAEP.new(public_client_key)
         #returns encrypted data to let client/server handle
@@ -110,7 +115,6 @@ def encrypt(filename):
     except:
         #passes file not found exception
         pass
-    finally:
         return
 
 #function used to decrypt data
