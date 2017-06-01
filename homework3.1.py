@@ -14,6 +14,11 @@ def encrypt_personal_data(filename):
     cipher_text = encryption_suite.encrypt(data)
     return cipher_text
 
+def decrypt_personal_data(data):
+    decryption_suite = AES.new('This is my key!!', AES.MODE_CFB, 'This is my IV!!!')
+    msg = decryption_suite.decrypt(data)
+    return msg
+
 def encrypt(data):
     encryption_suite = AES.new('Sixteen byte key', AES.MODE_CFB, 'This is the IV!!')
     cipher_text = encryption_suite.encrypt(data)
@@ -54,7 +59,10 @@ def server():
                 print >>sys.stderr, '%s' % data
                 if data:
                     data = decrypt(data)
-                    connection.sendall('received message: ' + data)
+                    print(data)
+                    data = data[64:]
+                    print(data)
+                    connection.sendall(data)
                 else:
                     break
         finally:
@@ -80,6 +88,7 @@ def client():
                     break
                 my_encrypted_file = encrypt_personal_data(file_to_encrypt)
                 hash_value = hasher(my_encrypted_file)
+                print(my_encrypted_file)
                 print(hash_value)
                 packet = hash_value + my_encrypted_file
                 message = encrypt(packet)
@@ -93,6 +102,9 @@ def client():
             while amount_received < amount_expected:
                 data = sock.recv(1024)
                 amount_received += len(data)
+                print(data)
+                msg = decrypt_personal_data(data)
+                print(msg)
                 print >>sys.stderr, data
     finally:
         print >>sys.stderr, 'closing socket'
