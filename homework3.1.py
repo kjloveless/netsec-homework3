@@ -1,9 +1,20 @@
 import socket
 import sys
 from Crypto.Cipher import AES
+from Crypto.Hash import SHA256
 
-def encrypt():
-    data = open("test_text", "rb").read()
+def hasher(data):
+    h = SHA256.new()
+    h.update(data)
+    return h.hexdigest()
+
+def encrypt_personal_data(filename):
+    data = open(filename, "rb").read()
+    encryption_suite = AES.new('This is my key!!', AES.MODE_CFB, 'This is my IV!!!')
+    cipher_text = encryption_suite.encrypt(data)
+    return cipher_text
+
+def encrypt(data):
     encryption_suite = AES.new('Sixteen byte key', AES.MODE_CFB, 'This is the IV!!')
     cipher_text = encryption_suite.encrypt(data)
     return cipher_text
@@ -60,11 +71,19 @@ def client():
 
     try:
         while True:
-            message = raw_input('Enter the message you would like to send: ')
-            if message == 'exit':
-                sock.close()
+            choice = raw_input('Would you like to send or retrieve data? ').lower()
+            if choice == 'exit':
                 break
-            message = encrypt()
+            if choice in ['send', 's']:
+                file_to_encrypt = raw_input('Enter the filename you would like to encrypt: ')
+                if file_to_encrypt == 'exit':
+                    break
+                my_encrypted_file = encrypt_personal_data(file_to_encrypt)
+                hash_value = hasher(my_encrypted_file)
+                print(hash_value)
+                packet = hash_value + my_encrypted_file
+                message = encrypt(packet)
+
             print >>sys.stderr, 'sending "%s"' % message
             sock.sendall(message)
 
@@ -74,7 +93,7 @@ def client():
             while amount_received < amount_expected:
                 data = sock.recv(1024)
                 amount_received += len(data)
-                print >>sys.stderr, '"%s"' % data
+                print >>sys.stderr, data
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
