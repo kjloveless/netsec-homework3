@@ -3,11 +3,12 @@ import sys
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
 
-
+#used to hash data and return hexdigest
 def hasher(data):
     h = SHA256.new()
     h.update(data)
     return h.hexdigest()
+
 #need to take in a key and IV instead of hardcoding
 def encrypt_personal_data(filename):
     data = open(filename, "rb").read()
@@ -59,7 +60,12 @@ def server():
                 if data:
                     data = decrypt(data)
                     #print(data)
-                    data = data[64:]
+                    filename = data[:64]
+                    print('This is the filename hash: ' + filename)
+                    hash_value = data[64:128]
+                    print('This is the encrypted file hash: ' + hash_value)
+                    data = data[128:]
+                    print('This is the encrypted file: ' + data)
                     #print(data)
                     connection.sendall(data)
                 else:
@@ -67,6 +73,22 @@ def server():
         finally:
             connection.close()
         return
+
+def send():
+    file_to_encrypt = raw_input('Enter the filename you would like to encrypt: ')
+    if file_to_encrypt in ['exit', 'x']:
+        return
+    filename_hash = hasher(file_to_encrypt)
+    print('This is the filename hash: ' + filename_hash)
+    my_encrypted_file = encrypt_personal_data(file_to_encrypt)
+    print('This is the encrypted file: ' + my_encrypted_file)
+    hash_value = hasher(my_encrypted_file)
+    print('This is the encrypted file hash: ' + hash_value)
+    #print(my_encrypted_file)
+    #print(hash_value)
+    packet = filename_hash + hash_value + my_encrypted_file
+    message = encrypt(packet)
+    return message
 
 #setup client role
 #TO-DO need to write retrieve code, try to create more functions to reduce redundancy
@@ -79,26 +101,21 @@ def client():
 
     try:
         while True:
-            choice = raw_input('Would you like to send or retrieve data? ').lower()
+            choice = ''
+            while choice not in ['send', 's', 'retrieve', 'r', 'exit', 'x']:
+                choice = raw_input('Would you like to send or retrieve data? ').lower()
             if choice == 'exit':
                 break
             if choice in ['send', 's']:
-                file_to_encrypt = raw_input('Enter the filename you would like to encrypt: ')
-                if file_to_encrypt == 'exit':
-                    break
-                my_encrypted_file = encrypt_personal_data(file_to_encrypt)
-                hash_value = hasher(my_encrypted_file)
-                #print(my_encrypted_file)
-                #print(hash_value)
-                packet = hash_value + my_encrypted_file
-                message = encrypt(packet)
+                message = send()
 
-            print >>sys.stderr, 'sending "%s"' % message
+            elif choice in ['retrieve', 'r']:
+                    break
             sock.sendall(message)
 
             #NEED TO HANDLE THE LENGTH CORRECTLY
             amount_received = 0
-            amount_expected = len(message[64:])
+            amount_expected = len(message[128:])
 
             while amount_received < amount_expected:
                 data = sock.recv(1024)
@@ -114,7 +131,6 @@ def client():
 
 #initializes an empty string to be used to validate role input
 choice = ''
-
 while choice not in ['server', 's', 'client', 'c']:
     choice = raw_input('Enter your role(server or client)').lower()
 
