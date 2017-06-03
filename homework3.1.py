@@ -39,7 +39,7 @@ def decrypt(data):
 def server():
     #create a socket to use
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_address = ('localhost', 8081)
+    server_address = ('localhost', 8080)
     print >>sys.stderr,'starting up on the %s port %s' % server_address
     sock.bind(server_address)
     sock.listen(1)
@@ -75,21 +75,19 @@ def server():
                         open(filename, "wb").write(incoming)
                     #print(data)
                     connection.sendall(incoming)
-                    break
+
                 elif data == 'retrieve':
 
                     print("trying to retrieve data")
                     requested_filename = connection.recv(1024)
                     if os.path.exists(requested_filename):
-                        connection.sendall('found')
+                        file_data = open(requested_filename, "rb").read()
+                        hash_of_req_file = hasher(requested_filename)
+                        packet = hash_of_req_file + file_data
+                        encrypted_packet = encrypt(packet)
+                        connection.sendall(encrypted_packet)
                     else:
-                        connection.sendall('File not found, please try another name.')
-                        break
-                    file_data = open(requested_filename, "rb").read()
-                    hash_of_req_file = hasher(requested_filename)
-                    packet = hash_of_req_file + file_data
-                    encrypted_packet = encrypt(packet)
-                    connection.sendall(encrypted_packet)
+                        connection.sendall('nope')
                 else:
                     break
 
@@ -123,7 +121,7 @@ def send():
 def client():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    server_address = ('localhost', 8081)
+    server_address = ('localhost', 8080)
     print >>sys.stderr, 'connecting to %s port %s' % server_address
     sock.connect(server_address)
 
@@ -149,32 +147,20 @@ def client():
                     sock.sendall(hashed_filename)
 
                     server_file_status = sock.recv(1024)
-                    if server_file_status == 'found':
-                        print(server_file_status)
-                        requested_packet_data = sock.recv(1024)
-                        print(requested_packet_data)
+                    if server_file_status == 'nope':
+                        print('Filename not found, please try again or exit.')
+                        #print('here')
+                        break
+                    else:
+                        #print(server_file_status)
+                        requested_packet_data = server_file_status
+                        #print(requested_packet_data)
                         decrypted_packet = decrypt(requested_packet_data)
                         hash_value = decrypted_packet[:64]
                         personal_data = decrypted_packet[64:]
                         print(decrypt_personal_data(personal_data))
                         break
-                    else:
-                        print(server_file_status)
-                        break
-
                     break
-
-            #NEED TO HANDLE THE LENGTH CORRECTLY
-            #amount_received = 0
-            #amount_expected = len(message[128:])
-
-            #while amount_received < amount_expected:
-                #data = sock.recv(1024)
-                #amount_received += len(data)
-                #print(data)
-                #msg = decrypt_personal_data(data)
-                #print(msg)
-                #print >>sys.stderr, data
     finally:
         print >>sys.stderr, 'closing socket'
         sock.close()
