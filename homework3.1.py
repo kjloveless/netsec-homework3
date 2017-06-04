@@ -150,7 +150,7 @@ def client():
                 response = sock.recv(1024)
                 print(response)
                 if response == 'del':
-                    os.remove("test_text")
+                    os.remove(file_to_encrypt)
 
             elif choice in ['retrieve', 'r']:
                 while True:
